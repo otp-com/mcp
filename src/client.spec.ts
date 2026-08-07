@@ -7,15 +7,15 @@ const client = (fetchImpl: unknown) => new OtpApiClient(config, fetchImpl as typ
 
 describe('OtpApiClient', () => {
   it('sends with Bearer auth + JSON body and returns the payload', async () => {
-    const f = ok({ otp_id: 'o1', status: 'pending', channel: 'sms', masked_recipient: '+90****33' })
-    const res = await client(f).send({ recipient: '+905551112233', locale: 'en' })
+    const f = ok({ otp_id: 'o1', status: 'pending', channel: 'sms', masked_recipient: '+14****71' })
+    const res = await client(f).send({ recipient: '+14155552671', locale: 'en' })
     expect(res.otp_id).toBe('o1')
     const [url, init] = f.mock.calls[0]
     expect(url).toBe('https://api.otp.com/api/v1/otp/send')
     expect(init.method).toBe('POST')
     expect(init.headers.Authorization).toBe('Bearer k')
     expect(init.headers['Content-Type']).toBe('application/json')
-    expect(JSON.parse(init.body)).toEqual({ recipient: '+905551112233', locale: 'en' })
+    expect(JSON.parse(init.body)).toEqual({ recipient: '+14155552671', locale: 'en' })
   })
 
   it('posts verify and resend to their endpoints', async () => {

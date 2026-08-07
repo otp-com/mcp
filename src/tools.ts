@@ -23,7 +23,7 @@ export function registerOtpTools(server: McpServer, client: OtpApiClient): void 
       description:
         'Send a one-time password to a phone number or email. The delivery channel is chosen by your account routing; you only pass the recipient. The code itself is never returned; you get an otp_id to verify against. If the response has channel:"whatsapp" it also carries action_url (a wa.me link) and the code is not sent yet: show the user that link, they open it to receive the code over WhatsApp, then verify_otp with the code they entered. On every other channel action_url is null and the code is already on its way.',
       inputSchema: {
-        recipient: z.string().min(1).describe('Phone number in E.164 (e.g. +905551234567) or an email address'),
+        recipient: z.string().min(1).describe('Phone number in E.164 (e.g. +14155552671) or an email address'),
         locale: z.string().optional().describe('Message language, e.g. "en" or "tr" (optional)'),
       },
     },
