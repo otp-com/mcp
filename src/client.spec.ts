@@ -23,9 +23,16 @@ describe('OtpApiClient', () => {
     await client(f1).verify({ otp_id: 'o1', code: '123456' })
     expect(f1.mock.calls[0][0]).toBe('https://api.otp.com/api/v1/otp/verify')
 
-    const f2 = ok({ otp_id: 'o1', status: 'pending', channel: 'whatsapp', masked_recipient: 'x' })
-    await client(f2).resend({ otp_id: 'o1' })
+    const f2 = ok({ otp_id: 'o1', status: 'pending', channel: 'whatsapp', masked_recipient: 'x', action_url: 'https://wa.me/1?text=x' })
+    const resent = await client(f2).resend({ otp_id: 'o1' })
     expect(f2.mock.calls[0][0]).toBe('https://api.otp.com/api/v1/otp/resend')
+    expect(resent.action_url).toBe('https://wa.me/1?text=x')
+  })
+
+  it('resends onto an explicit channel when one is given', async () => {
+    const f = ok({ otp_id: 'o1', status: 'pending', channel: 'sms', masked_recipient: 'x', action_url: null })
+    await client(f).resend({ otp_id: 'o1', channel: 'sms' })
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ otp_id: 'o1', channel: 'sms' })
   })
 
   it('gets status with no body (no Content-Type), URL-encoding the id', async () => {

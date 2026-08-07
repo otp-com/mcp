@@ -8,6 +8,8 @@ export interface OtpResult {
   status: string
   channel: string | null
   masked_recipient: string
+  // wa.me link the user opens to receive the code; only set when the OTP routed on whatsapp.
+  action_url: string | null
 }
 
 export interface VerifyResult {
@@ -53,8 +55,8 @@ export class OtpApiClient {
     return this.post<VerifyResult>('/otp/verify', { otp_id: input.otp_id, code: input.code })
   }
 
-  resend(input: { otp_id: string }): Promise<OtpResult> {
-    return this.post<OtpResult>('/otp/resend', { otp_id: input.otp_id })
+  resend(input: { otp_id: string; channel?: string }): Promise<OtpResult> {
+    return this.post<OtpResult>('/otp/resend', { otp_id: input.otp_id, channel: input.channel })
   }
 
   status(otpId: string): Promise<StatusResult> {

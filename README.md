@@ -39,10 +39,25 @@ no secrets in the source: you supply your own API key at runtime via an environm
 | --- | --- | --- |
 | `send_otp` | Send a code (channel chosen by your account routing) | `recipient`, `locale?` |
 | `verify_otp` | Verify the code the user entered | `otp_id`, `code` |
-| `resend_otp` | Resend on the next channel | `otp_id` |
+| `resend_otp` | Resend on the next (or a given) channel | `otp_id`, `channel?` |
 | `get_otp_status` | Check an OTP's status | `otp_id` |
 
 The code is never returned by the API; you verify against the `otp_id` from `send_otp`.
+
+### WhatsApp: the code comes back to the user
+
+Verification is identical on every channel, but WhatsApp delivery has one extra step. When
+`send_otp` (or `resend_otp`) returns `channel: "whatsapp"`, the response also carries an
+`action_url` and the code has not been sent yet:
+
+1. Show the user `action_url` (a `wa.me` link).
+2. They open it and send us the prefilled message from their own WhatsApp.
+3. We reply over WhatsApp with the code. The OTP stays `pending` until they enter it.
+4. Call `verify_otp` with the code they entered.
+
+`action_url` is `null` on every other channel. Don't poll `get_otp_status` waiting for a WhatsApp
+OTP to approve itself; nothing approves without `verify_otp`. If the user has no WhatsApp, call
+`resend_otp` with `channel: "sms"`.
 
 ## Development
 
