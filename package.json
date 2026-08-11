@@ -29,6 +29,14 @@
     "2fa"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otp-com/mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/otp-com/mcp/issues"
+  },
+  "homepage": "https://github.com/otp-com/mcp#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.4.3"

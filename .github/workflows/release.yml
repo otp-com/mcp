@@ -1,24 +1,52 @@
 name: Release
-# Tag a version (e.g. v0.1.0) to publish to npm. Requires an NPM_TOKEN secret (automation token).
+# Manual release: enter a version, it bumps package.json, publishes to npm, then tags and creates a GitHub release.
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release: an exact number (0.2.0) or a bump keyword (patch, minor, major)'
+        required: true
+        type: string
 permissions:
-  contents: read
+  contents: write # push the version commit and tag, create the release
   id-token: write # npm provenance: links the published package to this exact commit
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing (OIDC) needs npm >= 11.5.1, newer than the one bundled with Node 24.
+      - run: npm install -g npm@latest
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run test
       - run: pnpm run build
-      - run: pnpm publish --no-git-checks --provenance --access public
+
+      - name: Bump version and create tag
+        id: bump
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          tag=$(npm version "$VERSION" -m 'release: v%s')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # Published before the tag is pushed: a failed publish must not leave a release tag on main.
+      - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - run: git push --follow-tags origin HEAD:main
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.bump.outputs.tag }}" --generate-notes
