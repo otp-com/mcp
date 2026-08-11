@@ -1,14 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { OtpApiClient } from './client'
+import { OtpApiError, type OtpApiClient } from './client'
 import { registerOtpTools } from './tools'
 
 type Handler = (args: Record<string, unknown>) => Promise<{ content: { type: string; text: string }[]; isError?: boolean }>
+type ToolConfig = { inputSchema: Record<string, { safeParse: (value: unknown) => { success: boolean } }> }
 
 function fakeServer() {
   const tools = new Map<string, Handler>()
-  const server = { registerTool: (name: string, _config: unknown, cb: Handler) => tools.set(name, cb) }
-  return { server: server as unknown as McpServer, tools }
+  const configs = new Map<string, ToolConfig>()
+  const server = {
+    registerTool: (name: string, config: ToolConfig, cb: Handler) => {
+      tools.set(name, cb)
+      configs.set(name, config)
+    },
+  }
+  return { server: server as unknown as McpServer, tools, configs }
 }
 
 describe('registerOtpTools', () => {
@@ -35,6 +42,25 @@ describe('registerOtpTools', () => {
     const res = await tools.get('send_otp')!({ recipient: '+1' })
     expect(res.isError).toBe(true)
     expect(res.content[0].text).toBe('Invalid API key')
+  })
+
+  it('carries the API error class and status alongside the message', async () => {
+    const { server, tools } = fakeServer()
+    const send = vi.fn().mockRejectedValue(new OtpApiError(409, 'No enabled channel configured', 'NoEnabledChannelError'))
+    registerOtpTools(server, { send } as unknown as OtpApiClient)
+    const res = await tools.get('send_otp')!({ recipient: '+1' })
+    expect(res.isError).toBe(true)
+    expect(res.content[0].text).toBe('No enabled channel configured [NoEnabledChannelError, HTTP 409]')
+  })
+
+  it('bounds the inputs the API bounds, so an oversized value never leaves the process', () => {
+    const { server, configs } = fakeServer()
+    registerOtpTools(server, {} as OtpApiClient)
+    const send = configs.get('send_otp')!.inputSchema
+    expect(send.recipient.safeParse('a'.repeat(321)).success).toBe(false)
+    expect(send.locale.safeParse('x'.repeat(11)).success).toBe(false)
+    expect(configs.get('verify_otp')!.inputSchema.code.safeParse('1'.repeat(17)).success).toBe(false)
+    expect(configs.get('get_otp_status')!.inputSchema.otp_id.safeParse('not-a-uuid').success).toBe(false)
   })
 
   it('handles a non-Error rejection', async () => {

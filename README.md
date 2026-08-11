@@ -54,11 +54,15 @@ A missing `OTP_API_KEY` fails at startup with an explicit message rather than at
 | `get_otp_status` | Check an OTP's status | `otp_id` |
 
 `recipient` is a phone number in E.164 (`+14155552671`) or an email address. The code is never
-returned by the API: you verify against the `otp_id` from `send_otp`.
+returned by the API: you verify against the `otp_id` from `send_otp`. The input bounds mirror the
+API's own validation (`recipient` 320 chars, `locale` 10, `code` 16, `otp_id` a UUID), so an
+oversized value is refused here instead of costing a round trip that comes back `422`.
 
 Each tool returns the API payload as JSON text. A wrong code is a normal result
 (`matched: false`), not an error; a rejected request comes back with `isError` set and the API's
-message, so the calling model can react instead of guessing.
+message plus its error class and HTTP status, e.g.
+`No enabled channel configured [NoEnabledChannelError, HTTP 409]`. That is what tells the calling
+model whether to fix the input (`422`), wait (`429`), pick another channel (`409`) or stop (`401`).
 
 ### WhatsApp: the code comes back to the user
 
@@ -85,11 +89,6 @@ pnpm run build   # -> dist/ (the published artifact)
 ```
 
 The protocol owns stdout: logs and diagnostics must go to stderr, or the client's connection breaks.
-
-Unlike the language SDKs, this repo is hand-written rather than generated from `openapi.yaml`. When
-the contract changes, update [`src/client.ts`](./src/client.ts) and
-[`src/tools.ts`](./src/tools.ts) to match; the tool descriptions are what the model reads, so they
-are part of the interface, not comments.
 
 ## License
 

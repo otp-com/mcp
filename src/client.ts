@@ -3,10 +3,15 @@ import type { Config } from './config.js'
 // Thin client for the public OTP API (Bearer auth). Mirrors the four public endpoints; shapes match
 // the API's response DTOs. `fetch` is injectable so the tools can be tested without a network.
 
+// The contract's shared Status and Channel schemas; kept as unions so a typo is a compile error here
+// rather than a surprise for whoever reads the tool output.
+export type OtpStatus = 'pending' | 'approved' | 'failed' | 'expired'
+export type Channel = 'sms' | 'whatsapp' | 'email' | 'telegram'
+
 export interface OtpResult {
   otp_id: string
-  status: string
-  channel: string | null
+  status: OtpStatus
+  channel: Channel | null
   masked_recipient: string
   // wa.me link the user opens to receive the code; only set when the OTP routed on whatsapp.
   action_url: string | null
@@ -14,13 +19,13 @@ export interface OtpResult {
 
 export interface VerifyResult {
   otp_id: string
-  status: string
+  status: OtpStatus
   matched: boolean
 }
 
 export interface StatusResult {
   otp_id: string
-  status: string
+  status: OtpStatus
   masked_recipient: string
 }
 
@@ -55,7 +60,7 @@ export class OtpApiClient {
     return this.post<VerifyResult>('/otp/verify', { otp_id: input.otp_id, code: input.code })
   }
 
-  resend(input: { otp_id: string; channel?: string }): Promise<OtpResult> {
+  resend(input: { otp_id: string; channel?: Channel }): Promise<OtpResult> {
     return this.post<OtpResult>('/otp/resend', { otp_id: input.otp_id, channel: input.channel })
   }
 
