@@ -52,8 +52,8 @@ export class OtpApiClient {
     this.fetchImpl = fetchImpl
   }
 
-  send(input: { recipient: string; locale?: string }): Promise<OtpResult> {
-    return this.post<OtpResult>('/otp/send', { recipient: input.recipient, locale: input.locale })
+  send(input: { recipient: string; locale?: string; client_ip?: string }): Promise<OtpResult> {
+    return this.post<OtpResult>('/otp/send', { recipient: input.recipient, locale: input.locale, client_ip: input.client_ip })
   }
 
   verify(input: { otp_id: string; code: string }): Promise<VerifyResult> {

@@ -18,6 +18,15 @@ describe('OtpApiClient', () => {
     expect(JSON.parse(init.body)).toEqual({ recipient: '+14155552671', locale: 'en' })
   })
 
+  it('includes client_ip in the send body when given, and drops it when absent', async () => {
+    const f = ok({ otp_id: 'o1', status: 'pending', channel: 'sms', masked_recipient: '+14****71' })
+    await client(f).send({ recipient: '+14155552671', client_ip: '81.2.69.142' })
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ recipient: '+14155552671', client_ip: '81.2.69.142' })
+    const f2 = ok({ otp_id: 'o2', status: 'pending', channel: 'sms', masked_recipient: '+14****71' })
+    await client(f2).send({ recipient: '+14155552671' })
+    expect(JSON.parse(f2.mock.calls[0][1].body)).toEqual({ recipient: '+14155552671' })
+  })
+
   it('posts verify and resend to their endpoints', async () => {
     const f1 = ok({ otp_id: 'o1', status: 'approved', matched: true })
     await client(f1).verify({ otp_id: 'o1', code: '123456' })

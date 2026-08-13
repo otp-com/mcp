@@ -48,15 +48,19 @@ A missing `OTP_API_KEY` fails at startup with an explicit message rather than at
 
 | Tool | Does | Input |
 | --- | --- | --- |
-| `send_otp` | Send a code; the channel comes from your account routing | `recipient`, `locale?` |
+| `send_otp` | Send a code; the channel comes from your account routing | `recipient`, `locale?`, `client_ip?` |
 | `verify_otp` | Verify the code the user entered | `otp_id`, `code` |
 | `resend_otp` | Resend on the next channel, or one you name | `otp_id`, `channel?` |
 | `get_otp_status` | Check an OTP's status | `otp_id` |
 
-`recipient` is a phone number in E.164 (`+14155552671`) or an email address. The code is never
-returned by the API: you verify against the `otp_id` from `send_otp`. The input bounds mirror the
-API's own validation (`recipient` 320 chars, `locale` 10, `code` 16, `otp_id` a UUID), so an
-oversized value is refused here instead of costing a round trip that comes back `422`.
+`recipient` is a phone number in E.164 (`+14155552671`) or an email address. `client_ip` is the
+IP of the **end user** being verified, when the calling application has it from its own request
+context: pass it whenever you can (requests without it share a much tighter rate limit and skip
+IP-based abuse protection), but never invent one and never send the machine's own address. The code
+is never returned by the API: you verify against the `otp_id` from `send_otp`. The input bounds
+mirror the API's own validation (`recipient` 320 chars, `locale` 10, `code` 16, `otp_id` a UUID,
+`client_ip` a valid IPv4/IPv6), so a bad value is refused here instead of costing a round trip that
+comes back `422`.
 
 Each tool returns the API payload as JSON text. A wrong code is a normal result
 (`matched: false`), not an error; a rejected request comes back with `isError` set and the API's

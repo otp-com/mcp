@@ -30,9 +30,27 @@ describe('registerOtpTools', () => {
     const send = vi.fn().mockResolvedValue({ otp_id: 'o1', status: 'pending' })
     registerOtpTools(server, { send } as unknown as OtpApiClient)
     const res = await tools.get('send_otp')!({ recipient: '+1', locale: 'en' })
-    expect(send).toHaveBeenCalledWith({ recipient: '+1', locale: 'en' })
+    expect(send).toHaveBeenCalledWith({ recipient: '+1', locale: 'en', client_ip: undefined })
     expect(res.isError).toBeUndefined()
     expect(JSON.parse(res.content[0].text)).toEqual({ otp_id: 'o1', status: 'pending' })
+  })
+
+  it('send_otp forwards the end-user client_ip when the caller has one', async () => {
+    const { server, tools } = fakeServer()
+    const send = vi.fn().mockResolvedValue({ otp_id: 'o1', status: 'pending' })
+    registerOtpTools(server, { send } as unknown as OtpApiClient)
+    await tools.get('send_otp')!({ recipient: '+1', client_ip: '81.2.69.142' })
+    expect(send).toHaveBeenCalledWith({ recipient: '+1', locale: undefined, client_ip: '81.2.69.142' })
+  })
+
+  it('send_otp validates client_ip as an IP (v4 or v6), keeping it optional', () => {
+    const { server, configs } = fakeServer()
+    registerOtpTools(server, {} as OtpApiClient)
+    const schema = configs.get('send_otp')!.inputSchema.client_ip
+    expect(schema.safeParse('81.2.69.142').success).toBe(true)
+    expect(schema.safeParse('2a02:6ea0::1').success).toBe(true)
+    expect(schema.safeParse('not-an-ip').success).toBe(false)
+    expect(schema.safeParse(undefined).success).toBe(true)
   })
 
   it('marks a failed call as isError with the error message', async () => {
