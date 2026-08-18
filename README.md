@@ -17,7 +17,24 @@ variable, and it never leaves the process except as an `Authorization` header.
 
 1. Create an API key in the otp.com panel under **API Keys**. `otp_live_…` sends for real,
    `otp_test_…` runs in sandbox.
-2. Add the server to your MCP client (Claude Desktop, Claude Code, Cursor, or your own agent):
+2. Add the server to your MCP client. Most CLIs take a one-liner:
+
+```sh
+# Claude Code
+claude mcp add otp -s user -e OTP_API_KEY=otp_live_your_key_here -- npx -y @otp.com/mcp
+
+# Codex
+codex mcp add otp --env OTP_API_KEY=otp_live_your_key_here -- npx -y @otp.com/mcp
+
+# VS Code
+code --add-mcp '{"name":"otp","command":"npx","args":["-y","@otp.com/mcp"],"env":{"OTP_API_KEY":"otp_live_your_key_here"}}'
+```
+
+`-s user` registers it for every project; drop it to add it to the current one only. All three write
+the key into a config file in plain text, and it lands in your shell history too, so on a shared
+machine edit the config by hand instead.
+
+Clients configured by file (Claude Desktop, Cursor, your own agent) take the same server as JSON:
 
 ```json
 {
