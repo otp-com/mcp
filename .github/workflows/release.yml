@@ -40,9 +40,8 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       # Published before the tag is pushed: a failed publish must not leave a release tag on main.
+      # Auth is the job's OIDC token via npm trusted publishing, so there is no NPM_TOKEN to leak.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - run: git push --follow-tags origin HEAD:main
 
