@@ -34,7 +34,7 @@ export function registerOtpTools(server: McpServer, client: OtpApiClient): void 
     {
       title: 'Send OTP',
       description:
-        'Send a one-time password to a phone number or email. The delivery channel is chosen by your account routing; you only pass the recipient. Pass client_ip when the calling application knows the END USER\'s IP address (the person being verified): requests without it share a much tighter rate limit. Never guess or fabricate an IP, and never send the server\'s own address; omit the field when the real value is not available. The code itself is never returned; you get an otp_id to verify against. If the response has channel:"whatsapp" it also carries action_url (a wa.me link) and the code is not sent yet: show the user that link, they open it to receive the code over WhatsApp, then verify_otp with the code they entered. On every other channel action_url is null and the code is already on its way.',
+        'Send a one-time password to a phone number or email. The delivery channel is chosen by your account routing; you only pass the recipient. Pass client_ip when the calling application knows the END USER\'s IP address (the person being verified): requests without it share a much tighter rate limit. Never guess or fabricate an IP, and never send the server\'s own address; omit the field when the real value is not available. The code itself is never returned; you get an otp_id to verify against. The response\'s completion field says how this OTP finishes. completion:"code": the code was delivered (SMS, email, Telegram, or WhatsApp in template mode), the user enters it and you call verify_otp. If action_url (a wa.me link) is also set, the code is not sent yet: show the user that link, they open it and send us the prefilled message, we reply with the code, then verify_otp. completion:"inbound": show the user action_url; their prefilled message itself approves the OTP, there is no code, so do not call verify_otp. Poll get_otp_status every 3 to 5 seconds until status leaves pending. Which WhatsApp mode applies is configured per account; action_url is null whenever no link is involved.',
       inputSchema: {
         recipient: z.string().min(1).max(320).describe('Phone number in E.164 (e.g. +14155552671) or an email address'),
         locale: z.string().max(10).optional().describe('Message language as a BCP-47 tag, e.g. "en" or "tr" (optional)'),
@@ -53,7 +53,8 @@ export function registerOtpTools(server: McpServer, client: OtpApiClient): void 
     'verify_otp',
     {
       title: 'Verify OTP',
-      description: 'Verify the code the user entered for a previously sent OTP. matched:true means the code was correct.',
+      description:
+        'Verify the code the user entered for a previously sent OTP. matched:true means the code was correct. Only for OTPs with completion:"code": an "inbound" OTP has no code, a verify call while it is pending never matches and spends an attempt, and once approved it simply reports the approved OTP. Wait for the approval via get_otp_status instead.',
       inputSchema: {
         otp_id: otpId,
         code: z.string().min(1).max(16).describe('The code the user entered'),
@@ -67,7 +68,7 @@ export function registerOtpTools(server: McpServer, client: OtpApiClient): void 
     {
       title: 'Resend OTP',
       description:
-        'Resend a pending OTP, advancing to the next configured channel (e.g. SMS to WhatsApp). Like send_otp, a resend that lands on WhatsApp returns action_url for the user to open. Pass channel to pick one explicitly, e.g. "sms" when the user has no WhatsApp.',
+        'Resend a pending OTP, advancing to the next configured channel (e.g. SMS to WhatsApp). The response has the same shape as send_otp: completion follows the channel, a resend that lands on WhatsApp in a link mode returns action_url for the user to open, and leaving WhatsApp for a code channel sets completion back to "code". Pass channel to pick one explicitly, e.g. "sms" when the user has no WhatsApp.',
       inputSchema: {
         otp_id: otpId,
         channel: z
@@ -84,7 +85,7 @@ export function registerOtpTools(server: McpServer, client: OtpApiClient): void 
     {
       title: 'Get OTP status',
       description:
-        'Check the current status of an OTP (pending, approved, failed, or expired). Do not poll this waiting for a WhatsApp OTP to approve itself: on every channel an OTP only leaves pending once you call verify_otp with the code the user entered.',
+        'Check the current status of an OTP (pending, approved, failed, or expired) and its completion. For completion:"code" an OTP only leaves pending once you call verify_otp with the code the user entered, so do not poll this instead of verifying. For completion:"inbound" this is how you learn the approval: poll every 3 to 5 seconds until status leaves pending.',
       inputSchema: {
         otp_id: otpId,
       },

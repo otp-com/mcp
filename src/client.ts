@@ -7,14 +7,19 @@ import type { Config } from './config.js'
 // rather than a surprise for whoever reads the tool output.
 export type OtpStatus = 'pending' | 'approved' | 'failed' | 'expired'
 export type Channel = 'sms' | 'whatsapp' | 'email' | 'telegram'
+// How an OTP finishes: 'code' means the user enters a code and verify_otp approves it; 'inbound' means
+// the user's prefilled WhatsApp message approves it and there is no code (poll status or the webhook).
+export type Completion = 'code' | 'inbound'
 
 export interface OtpResult {
   otp_id: string
   status: OtpStatus
   channel: Channel | null
   masked_recipient: string
-  // wa.me link the user opens to receive the code; only set when the OTP routed on whatsapp.
+  // wa.me link the user opens to send us a prefilled message; only set when the OTP routed on whatsapp
+  // in a link mode (null under the template mode, where the code is pushed like SMS).
   action_url: string | null
+  completion: Completion
 }
 
 export interface VerifyResult {
@@ -27,6 +32,7 @@ export interface StatusResult {
   otp_id: string
   status: OtpStatus
   masked_recipient: string
+  completion: Completion
 }
 
 // The API rejected the request; carries the HTTP status and the error envelope's type when present.
